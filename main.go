@@ -12,89 +12,82 @@ import (
 	"strings"
 )
 
-// CliArgs is a ... TODO ...
-type CliArgs struct {
-	Type      string
-	Args      string // extra args provided to the analyzer
-	OutputDir string // directory to save failure analysis
+type opts struct {
+	id     string
+	config string // extra config provided to the analyzer
 }
 
-// AnalyzerArgs is a ... TODO ...
-type AnalyzerArgs struct {
-	Exitcode int
-	Log      string
+type args struct {
+	exitcode int
+	log      string
 }
 
-// AnalyzerResult is a ... TODO ...
-type AnalyzerResult struct {
+type result struct {
 	Category    string `json:"category"`
 	Subcategory string `json:"subcategory"`
 }
 
-// Analyzer is a thing with an analyze function
-type Analyzer interface {
-	analyze(args AnalyzerArgs) AnalyzerResult
+type analyzer interface {
+	run(args args) result
 }
 
 // ExitCodeAnalyzer is a ... TODO ...
-type ExitCodeAnalyzer struct {
+type exitCodeAnalyzer struct {
 	Category    string
 	Subcategory string
 }
 
-func (a ExitCodeAnalyzer) analyze(args AnalyzerArgs) AnalyzerResult {
-	if args.Exitcode == 0 {
-		return AnalyzerResult{Category: "success", Subcategory: ""}
+func (a exitCodeAnalyzer) run(args args) result {
+	if args.exitcode == 0 {
+		return result{Category: "success", Subcategory: ""}
 	}
-	return AnalyzerResult{Category: a.Category, Subcategory: a.Subcategory}
+	return result{Category: a.Category, Subcategory: a.Subcategory}
 }
 
 // SqApplyDiffsAnalyzer is a ... TODO ...
-type SqApplyDiffsAnalyzer struct{}
+// type SqApplyDiffsAnalyzer struct{}
 
-func (a SqApplyDiffsAnalyzer) analyze(args AnalyzerArgs) AnalyzerResult {
-	// f(exitCode, log) -> analyzerResult
-	return AnalyzerResult{Category: "baz", Subcategory: "moo"}
-}
+// func (a SqApplyDiffsAnalyzer) run(args args) result {
+// 	// f(exitCode, log) -> result
+// 	return result{Category: "baz", Subcategory: "moo"}
+// }
 
-func getAnalyzer(cliArgs CliArgs) (Analyzer, error) {
-	switch cliArgs.Type {
+func getAnalyzer(opts opts) (analyzer, error) {
+	switch opts.id {
 	case "exitcode":
-		s := strings.Fields(cliArgs.Args)
+		s := strings.Fields(opts.config)
 		Category := s[0]
 		Subcategory := s[1]
-		// TODO: assert that category is one of { success, canceled, infra_failure, user_failure }
-		return ExitCodeAnalyzer{Category: Category, Subcategory: Subcategory}, nil
-	case "sq_apply_diffs":
-		return SqApplyDiffsAnalyzer{}, nil
+		return exitCodeAnalyzer{Category: Category, Subcategory: Subcategory}, nil
+	// case "sq_apply_diffs":
+	// 	return SqApplyDiffsAnalyzer{}, nil
 	default:
-		return nil, fmt.Errorf("invalid analyzer type %v", cliArgs.Type)
+		return nil, fmt.Errorf("invalid analyzer type %v", opts.id)
 	}
 }
 
 func main() {
 
 	var (
-		Type      string
-		Args      string
-		OutputDir string
+		id        string
+		config    string
+		outputDir string
 	)
 
-	flag.StringVar(&Type, "type", "", "analyzer type")
-	flag.StringVar(&Args, "args", "", "args for the specified analyzer")
-	flag.StringVar(&OutputDir, "output-dir", "artifacts/analysis", "directory to store analysis output")
+	flag.StringVar(&id, "type", "", "analyzer type")
+	flag.StringVar(&config, "config", "", "args for the specified analyzer")
+	flag.StringVar(&outputDir, "output-dir", "artifacts/analysis", "directory to store analysis output")
 
 	flag.Parse()
 
-	cliArgs := CliArgs{Type: Type, Args: Args, OutputDir: OutputDir}
+	opts := opts{id: id, config: config}
 
 	// get analyzer
-	analyzer, err := getAnalyzer(cliArgs)
+	analyzer, err := getAnalyzer(opts)
 	if err != nil {
-		log.Fatalf("invalid analyzer type %v", cliArgs.Type)
+		log.Fatalf("invalid analyzer type %v", opts.id)
 	}
 
-	// run command, store stdout / stderr to log in buffer while printing to stdout
 	var out bytes.Buffer
 	cmd := exec.Command(flag.Arg(0), flag.Args()[1:]...)
 
@@ -117,15 +110,10 @@ func main() {
 	}()
 
 	cmd.Run()
-
 	code := cmd.ProcessState.ExitCode()
-
 	// call analyzer with exitCode, log
-	result := analyzer.analyze(AnalyzerArgs{Exitcode: code, Log: out.String()})
-
+	result := analyzer.run(args{exitcode: code, log: out.String()})
 	resultB, _ := json.Marshal(result)
 	fmt.Println(string(resultB))
-
-	Foo()
 
 }
