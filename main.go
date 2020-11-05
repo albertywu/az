@@ -7,8 +7,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
+	"os"
 	"os/exec"
+	"path"
 )
 
 func main() {
@@ -56,9 +59,20 @@ func main() {
 
 	cmd.Run()
 	code := cmd.ProcessState.ExitCode()
-	// call analyzer with exitCode, log
 	result := analyzer.run(args{exitcode: code, log: out.String()})
 	resultB, _ := json.Marshal(result)
-	fmt.Println(string(resultB))
 
+	var failureDirAbs string
+	if path.IsAbs(outputDir) {
+		failureDirAbs = outputDir
+	} else {
+		cwd, _ := os.Getwd()
+		failureDirAbs = fmt.Sprintf("%s/%s", cwd, outputDir)
+	}
+	os.RemoveAll(failureDirAbs)
+	err = os.MkdirAll(failureDirAbs, 0755)
+	if err != nil {
+		log.Fatalf("could not create dir at %v", failureDirAbs)
+	}
+	ioutil.WriteFile(fmt.Sprintf("%s/failure", failureDirAbs), []byte(resultB), 0644)
 }
