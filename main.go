@@ -1,12 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
-	"os"
+	"log"
 	"os/exec"
 	"strings"
 )
@@ -56,21 +57,19 @@ func (a SqApplyDiffsAnalyzer) analyze(args AnalyzerArgs) AnalyzerResult {
 	return AnalyzerResult{Category: "baz", Subcategory: "moo"}
 }
 
-func getAnalyzer(cliArgs CliArgs) Analyzer {
+func getAnalyzer(cliArgs CliArgs) (Analyzer, error) {
 	switch cliArgs.Type {
 	case "exitcode":
-		// todo: maybe put this logic into a factory function NewExitCodeAnalyzer
-		// assert that Args are well-formed
 		s := strings.Fields(cliArgs.Args)
 		Category := s[0]
 		Subcategory := s[1]
-		return ExitCodeAnalyzer{Category: Category, Subcategory: Subcategory}
+		// TODO: assert that category is one of { success, canceled, infra_failure, user_failure }
+		return ExitCodeAnalyzer{Category: Category, Subcategory: Subcategory}, nil
 	case "sq_apply_diffs":
-		return SqApplyDiffsAnalyzer{}
+		return SqApplyDiffsAnalyzer{}, nil
 	default:
-		panic(fmt.Sprintf("unknown analyzer type %v", cliArgs.Type))
+		return nil, fmt.Errorf("invalid analyzer type %v", cliArgs.Type)
 	}
-
 }
 
 func main() {
@@ -90,15 +89,35 @@ func main() {
 	cliArgs := CliArgs{Type: Type, Args: Args, OutputDir: OutputDir}
 
 	// get analyzer
-	analyzer := getAnalyzer(cliArgs)
+	analyzer, err := getAnalyzer(cliArgs)
+	if err != nil {
+		log.Fatalf("invalid analyzer type %v", cliArgs.Type)
+	}
 
 	// run command, store stdout / stderr to log in buffer while printing to stdout
 	var out bytes.Buffer
-	mwriter := io.MultiWriter(&out, os.Stdout)
 	cmd := exec.Command(flag.Arg(0), flag.Args()[1:]...)
-	cmd.Stderr = mwriter
-	cmd.Stdout = mwriter
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		log.Fatalf("could not get stderr pipe: %v", err)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Fatalf("could not get stdout pipe: %v", err)
+	}
+	go func() {
+		merged := io.MultiReader(stderr, stdout)
+		scanner := bufio.NewScanner(merged)
+		for scanner.Scan() {
+			msg := scanner.Text()
+			fmt.Println(msg)
+			out.Write(scanner.Bytes())
+		}
+	}()
+
 	cmd.Run()
+
 	code := cmd.ProcessState.ExitCode()
 
 	// call analyzer with exitCode, log
