@@ -126,12 +126,6 @@ func main() {
 	resultB, _ := json.Marshal(result)
 	fmt.Println(string(resultB))
 
-	// cmd := exec.Command("bash", "-c", "true && true && echo \"yoyoyo\"")
-	// var out bytes.Buffer
-	// cmd.Stdout = &out
-	// err := cmd.Run()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Printf("output was: %s", out.String())
+	Foo()
+
 }
