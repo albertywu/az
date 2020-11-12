@@ -46,6 +46,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not get stdout pipe: %v", err)
 	}
+
+	finished := make(chan bool)
 	go func() {
 		merged := io.MultiReader(stderr, stdout)
 		scanner := bufio.NewScanner(merged)
@@ -54,9 +56,12 @@ func main() {
 			fmt.Println(msg)
 			out.Write(scanner.Bytes())
 		}
+		finished <- true
 	}()
 
 	cmd.Run()
+	<-finished
+
 	code := cmd.ProcessState.ExitCode()
 	result := analyzer.run(args{exitcode: code, log: out.String()})
 
