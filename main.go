@@ -34,6 +34,7 @@ func main() {
 	}
 
 	cmd := exec.Command(flag.Arg(0), flag.Args()[1:]...)
+
 	var stdoutBuf, stderrBuf, combinedBuf bytes.Buffer
 	cmd.Stdout = io.MultiWriter(os.Stdout, &stdoutBuf, &combinedBuf)
 	cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf, &combinedBuf)
@@ -42,6 +43,7 @@ func main() {
 	stdoutStr, stderrStr, stdoutStderrStr := string(stdoutBuf.Bytes()), string(stderrBuf.Bytes()), string(combinedBuf.Bytes())
 
 	code := cmd.ProcessState.ExitCode()
+
 	result := analyzer.run(
 		args{
 			exitcode:        code,
