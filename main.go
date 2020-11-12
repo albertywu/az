@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"flag"
 	"fmt"
@@ -29,61 +28,59 @@ func main() {
 
 	opts := opts{id: id, config: config}
 
-	// get analyzer
 	analyzer, err := getAnalyzer(opts)
 	if err != nil {
 		log.Fatalf("invalid analyzer type %v", opts.id)
 	}
 
-	var out bytes.Buffer
 	cmd := exec.Command(flag.Arg(0), flag.Args()[1:]...)
-
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		log.Fatalf("could not get stderr pipe: %v", err)
-	}
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Fatalf("could not get stdout pipe: %v", err)
-	}
-
-	finished := make(chan bool)
-	go func() {
-		merged := io.MultiReader(stderr, stdout)
-		scanner := bufio.NewScanner(merged)
-		for scanner.Scan() {
-			msg := scanner.Text()
-			fmt.Println(msg)
-			out.Write(scanner.Bytes())
-		}
-		finished <- true
-	}()
+	var stdoutBuf, stderrBuf, combinedBuf bytes.Buffer
+	cmd.Stdout = io.MultiWriter(os.Stdout, &stdoutBuf, &combinedBuf)
+	cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf, &combinedBuf)
 
 	cmd.Run()
-	<-finished
+	stdoutStr, stderrStr, stdoutStderrStr := string(stdoutBuf.Bytes()), string(stderrBuf.Bytes()), string(combinedBuf.Bytes())
 
 	code := cmd.ProcessState.ExitCode()
-	result := analyzer.run(args{exitcode: code, log: out.String()})
+	result := analyzer.run(
+		args{
+			exitcode:        code,
+			stdoutStr:       stdoutStr,
+			stderrStr:       stderrStr,
+			stdoutStderrStr: stdoutStderrStr,
+		},
+	)
 
-	if result.Category == "success" {
-		os.Exit(code)
-	}
-
-	var failureDirAbs string
+	var outputDirAbs string
 	if path.IsAbs(outputDir) {
-		failureDirAbs = outputDir
+		outputDirAbs = outputDir
 	} else {
 		cwd, _ := os.Getwd()
-		failureDirAbs = fmt.Sprintf("%s/%s", cwd, outputDir)
+		outputDirAbs = fmt.Sprintf("%s/%s", cwd, outputDir)
 	}
-	os.RemoveAll(failureDirAbs)
-	err = os.MkdirAll(failureDirAbs, 0755)
+	os.RemoveAll(outputDirAbs)
+	err = os.MkdirAll(outputDirAbs, 0755)
 	if err != nil {
-		log.Fatalf("could not create dir at %v", failureDirAbs)
+		log.Fatalf("could not create dir at %v", outputDirAbs)
 	}
 	ioutil.WriteFile(
-		fmt.Sprintf("%s/failure", failureDirAbs),
+		fmt.Sprintf("%s/output", outputDirAbs),
 		[]byte(fmt.Sprintf("%s %s", result.Category, result.Subcategory)),
+		0644,
+	)
+	ioutil.WriteFile(
+		fmt.Sprintf("%s/stdout", outputDirAbs),
+		[]byte(stdoutStr),
+		0644,
+	)
+	ioutil.WriteFile(
+		fmt.Sprintf("%s/stderr", outputDirAbs),
+		[]byte(stderrStr),
+		0644,
+	)
+	ioutil.WriteFile(
+		fmt.Sprintf("%s/stdoutStderr", outputDirAbs),
+		[]byte(stdoutStderrStr),
 		0644,
 	)
 

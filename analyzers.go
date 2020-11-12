@@ -11,8 +11,10 @@ type opts struct {
 }
 
 type args struct {
-	exitcode int
-	log      string
+	exitcode        int
+	stdoutStr       string
+	stderrStr       string
+	stdoutStderrStr string
 }
 
 type result struct {
