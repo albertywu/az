@@ -24,7 +24,6 @@ type analyzer interface {
 	run(args args) result
 }
 
-// ExitCodeAnalyzer is a ... TODO ...
 type exitCodeAnalyzer struct {
 	Category    string
 	Subcategory string
@@ -37,10 +36,9 @@ func (a exitCodeAnalyzer) run(args args) result {
 	return result{Category: a.Category, Subcategory: a.Subcategory}
 }
 
-// SqApplyDiffsAnalyzer is a ... TODO ...
-// type SqApplyDiffsAnalyzer struct{}
+// type sqApplyDiffsAnalyzer struct{}
 
-// func (a SqApplyDiffsAnalyzer) run(args args) result {
+// func (a sqApplyDiffsAnalyzer) run(args args) result {
 // 	// f(exitCode, log) -> result
 // 	return result{Category: "baz", Subcategory: "moo"}
 // }
