@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -60,7 +59,10 @@ func main() {
 	cmd.Run()
 	code := cmd.ProcessState.ExitCode()
 	result := analyzer.run(args{exitcode: code, log: out.String()})
-	resultB, _ := json.Marshal(result)
+
+	if result.Category == "success" {
+		os.Exit(code)
+	}
 
 	var failureDirAbs string
 	if path.IsAbs(outputDir) {
@@ -74,5 +76,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not create dir at %v", failureDirAbs)
 	}
-	ioutil.WriteFile(fmt.Sprintf("%s/failure", failureDirAbs), []byte(resultB), 0644)
+	ioutil.WriteFile(
+		fmt.Sprintf("%s/failure", failureDirAbs),
+		[]byte(fmt.Sprintf("%s %s", result.Category, result.Subcategory)),
+		0644,
+	)
+
+	os.Exit(code)
 }
