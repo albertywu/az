@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
 	"./analyzer"
 )
@@ -69,7 +70,11 @@ func main() {
 	}
 	ioutil.WriteFile(
 		fmt.Sprintf("%s/output", outputDirAbs),
-		[]byte(fmt.Sprintf("%s %s", result.Category, result.Subcategory)),
+		[]byte(
+			strings.TrimSpace(
+				fmt.Sprintf("%s %s", result.Category, result.Subcategory),
+			),
+		),
 		0644,
 	)
 	ioutil.WriteFile(

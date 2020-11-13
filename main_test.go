@@ -58,26 +58,31 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestExitcodeAnalyzerPassing(t *testing.T) {
+func TestArtifactsWhenSuccess(t *testing.T) {
+	config := "infra foo"
 	cmd := exec.Command(
 		"./analyze",
 		"--type",
 		"exitcode",
 		"--config",
-		"infra failure",
-		"ls",
+		config,
+		"fixtures/exit_zero.sh",
 	)
-	err := cmd.Run()
-	if err != nil {
-		t.Errorf("expected pass")
+	cmd.Run()
+	code := cmd.ProcessState.ExitCode()
+	if code != 0 {
+		t.Errorf("expected process to exit with code 0")
 	}
-	_, err = ioutil.ReadFile("artifacts/analysis/failure")
-	if err == nil {
-		t.Errorf("failure file should not exist")
-	}
+
+	checkArtifacts(t, artifactTest{
+		expectedOutput:       "success",
+		expectedStdout:       "foo\n",
+		expectedStderr:       "bar\n",
+		expectedStdoutStderr: "foo\nbar\n",
+	})
 }
 
-func TestExitcodeAnalyzerFailing(t *testing.T) {
+func TestArtifactsWhenFailure(t *testing.T) {
 	config := "infra foo"
 	cmd := exec.Command(
 		"./analyze",
@@ -90,7 +95,6 @@ func TestExitcodeAnalyzerFailing(t *testing.T) {
 
 	cmd.Run()
 	code := cmd.ProcessState.ExitCode()
-	fmt.Println("Exit code:", code)
 	if code != 1 {
 		t.Errorf("expected process to exit with code 1")
 	}
