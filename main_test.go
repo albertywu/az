@@ -39,13 +39,13 @@ func makeBinary() {
 		"go",
 		"build",
 		"-o",
-		"analyze",
+		"az",
 	)
 	cmd.Run()
 }
 
 func cleanup() {
-	os.Remove("./analyze")
+	os.Remove("./az")
 	os.RemoveAll("artifacts")
 }
 
@@ -58,10 +58,10 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestArtifactsWhenSuccess(t *testing.T) {
+func TestExitcodeSuccess(t *testing.T) {
 	config := "infra foo"
 	cmd := exec.Command(
-		"./analyze",
+		"./az",
 		"--type",
 		"exitcode",
 		"--config",
@@ -82,10 +82,10 @@ func TestArtifactsWhenSuccess(t *testing.T) {
 	})
 }
 
-func TestArtifactsWhenFailure(t *testing.T) {
+func TestExitcodeFailure(t *testing.T) {
 	config := "infra foo"
 	cmd := exec.Command(
-		"./analyze",
+		"./az",
 		"--type",
 		"exitcode",
 		"--config",
@@ -105,5 +105,4 @@ func TestArtifactsWhenFailure(t *testing.T) {
 		expectedStderr:       "bar\n",
 		expectedStdoutStderr: "foo\nbar\n",
 	})
-
 }

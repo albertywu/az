@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-type Opts struct {
+type CliArgs struct {
 	Type   string
 	Config string // extra config provided to the analyzer
 }
@@ -26,14 +26,14 @@ type Analyzer interface {
 	Run(args Args) Result
 }
 
-func GetAnalyzer(opts Opts) (Analyzer, error) {
-	switch opts.Type {
+func GetAnalyzer(cliArgs CliArgs) (Analyzer, error) {
+	switch cliArgs.Type {
 	case "exitcode":
-		s := strings.Fields(opts.Config)
+		s := strings.Fields(cliArgs.Config)
 		Category := s[0]
 		Subcategory := s[1]
 		return ExitCodeAnalyzer{Category: Category, Subcategory: Subcategory}, nil
 	default:
-		return nil, fmt.Errorf("invalid analyzer type %v", opts.Type)
+		return nil, fmt.Errorf("invalid analyzer type %v", cliArgs.Type)
 	}
 }

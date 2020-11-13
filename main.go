@@ -29,11 +29,11 @@ func main() {
 
 	flag.Parse()
 
-	opts := analyzer.Opts{Type: _type, Config: config}
+	cliArgs := analyzer.CliArgs{Type: _type, Config: config}
 
-	az, err := analyzer.GetAnalyzer(opts)
+	az, err := analyzer.GetAnalyzer(cliArgs)
 	if err != nil {
-		log.Fatalf("invalid analyzer type %v", opts.Type)
+		log.Fatalf("invalid analyzer type %v", cliArgs.Type)
 	}
 
 	cmd := exec.Command(flag.Arg(0), flag.Args()[1:]...)
