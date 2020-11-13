@@ -10,27 +10,29 @@ import (
 	"os"
 	"os/exec"
 	"path"
+
+	"./analyzer"
 )
 
 func main() {
 
 	var (
-		id        string
+		_type     string
 		config    string
 		outputDir string
 	)
 
-	flag.StringVar(&id, "type", "", "analyzer type")
+	flag.StringVar(&_type, "type", "", "analyzer type")
 	flag.StringVar(&config, "config", "", "args for the specified analyzer")
 	flag.StringVar(&outputDir, "output-dir", "artifacts/analysis", "directory to store analysis output")
 
 	flag.Parse()
 
-	opts := opts{id: id, config: config}
+	opts := analyzer.Opts{Type: _type, Config: config}
 
-	analyzer, err := getAnalyzer(opts)
+	az, err := analyzer.GetAnalyzer(opts)
 	if err != nil {
-		log.Fatalf("invalid analyzer type %v", opts.id)
+		log.Fatalf("invalid analyzer type %v", opts.Type)
 	}
 
 	cmd := exec.Command(flag.Arg(0), flag.Args()[1:]...)
@@ -44,12 +46,12 @@ func main() {
 
 	code := cmd.ProcessState.ExitCode()
 
-	result := analyzer.run(
-		args{
-			exitcode:        code,
-			stdoutStr:       stdoutStr,
-			stderrStr:       stderrStr,
-			stdoutStderrStr: stdoutStderrStr,
+	result := az.Run(
+		analyzer.Args{
+			Exitcode:        code,
+			StdoutStr:       stdoutStr,
+			StderrStr:       stderrStr,
+			StdoutStderrStr: stdoutStderrStr,
 		},
 	)
 
